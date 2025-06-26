@@ -11,8 +11,10 @@ from vit_models.t2t_vit import t2t_vit_t_24
 from imagenet import ImagenetDataModule
 import timm
 
-MODELPATH="please-add-your-model-path"
-DATASETPATH="please-add-your-dataset-path"
+# MODELPATH="please-add-your-model-path"
+# DATASETPATH="please-add-your-dataset-path"
+MODELPATH="."
+DATASETPATH = "/mnt/nvme1/g84376653/imagenet/val"
 
 @torch.no_grad()
 def main():
@@ -31,7 +33,22 @@ def main():
         't2tattn2_cfg' : {'name': args.attn_method, 'sample_size': 24, 'bucket_size': 32},
     })
 
-    model.load_state_dict(torch.load(os.path.join(MODELPATH, "82.6_T2T_ViTt_24.pth.tar")), strict=True)
+    # model.load_state_dict(torch.load(os.path.join(MODELPATH, "82.6_T2T_ViTt_24.pth.tar")), strict=True)
+    checkpoint = torch.load(os.path.join(MODELPATH, "82.6_T2T_ViTt_24.pth.tar"))
+    state_dict = checkpoint["state_dict_ema"]
+
+    # Переименуем "tokens_to_token" -> "patch_embed"
+    renamed_state_dict = {}
+    for k, v in state_dict.items():
+        if k.startswith("tokens_to_token."):
+            new_key = k.replace("tokens_to_token.", "patch_embed.")
+            renamed_state_dict[new_key] = v
+        else:
+            renamed_state_dict[k] = v
+
+    model.load_state_dict(renamed_state_dict, strict=True)
+
+
 
     kwargs = {
         'data_dir': DATASETPATH,
